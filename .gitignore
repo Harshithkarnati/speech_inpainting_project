@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.env
+
+# Editor configuration
+.vscode/
+.idea/
+*.swp
+
+# Project-specific Data (Ignore large media files)
+data/input/*.wav
+data/input/*.mp3
+data/output/*.wav
+
+# Project-specific Results (Ignore auto-generated outputs)
+results/plots/*.png
+results/plots/*.jpg
+results/audio/*.wav
+results/logs/*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
