@@ -2,59 +2,98 @@ import numpy as np
 from scipy.fftpack import dct, idct
 
 
-def soft_threshold(x, threshold):
-    return np.sign(x) * np.maximum(np.abs(x) - threshold, 0)
+def hard_threshold(X, keep_ratio=0.1):
+    """
+    Keep top K% largest coefficients
+    """
+    K = int(len(X) * keep_ratio)
+
+    # Get indices of largest K values
+    idx = np.argsort(np.abs(X))[-K:]
+
+    X_new = np.zeros_like(X)
+    X_new[idx] = X[idx]
+
+    return X_new
 
 
-def gradient_smoothing(signal, weight=0.1):
+def gradient_smoothing(signal, mask, weight=0.1):
+    """
+    Apply smoothing ONLY on missing samples
+    """
     smoothed = np.copy(signal)
-    smoothed[1:-1] = signal[1:-1] + weight * (
-        signal[:-2] + signal[2:] - 2 * signal[1:-1]
-    )
+
+    for i in range(1, len(signal) - 1):
+        if mask[i] == 0:  # only missing points
+            smoothed[i] = signal[i] + weight * (
+                signal[i-1] + signal[i+1] - 2 * signal[i]
+            )
+
     return smoothed
 
 
+def process_frame(frame, mask_frame,
+                  num_iters=50,
+                  keep_ratio=0.1,
+                  lambda_grad=0.1):
+
+    x = np.copy(frame)
+
+    for _ in range(num_iters):
+
+        # DCT
+        X = dct(x, norm='ortho')
+
+        # Hard thresholding
+        X = hard_threshold(X, keep_ratio)
+
+        # Inverse DCT
+        x = idct(X, norm='ortho')
+
+        # Gradient smoothing (only missing)
+        x = gradient_smoothing(x, mask_frame, lambda_grad)
+
+        # Enforce known samples
+        x = mask_frame * frame + (1 - mask_frame) * x
+
+    return x
+
+
 def inpaint_signal(observed_signal, mask,
-                   num_iters=100,
-                   lambda_sparse=0.2,
-                   lambda_grad=0.2):
+                   frame_size=512,
+                   hop_size=256,
+                   num_iters=50,
+                   keep_ratio=0.1,
+                   lambda_grad=0.1):
     """
-    Improved Hybrid Inpainting Algorithm
+    Block-based inpainting with IHT
     """
 
-    # 🔹 Normalize
-    max_val = np.max(np.abs(observed_signal)) + 1e-8
-    x = observed_signal / max_val
+    N = len(observed_signal)
 
-    y = np.copy(x)   # for momentum
-    t = 1
+    reconstructed = np.zeros(N)
+    weight = np.zeros(N)
 
-    for i in range(num_iters):
+    for start in range(0, N - frame_size, hop_size):
 
-        # 🔹 Adaptive threshold
-        threshold = lambda_sparse * (1 - i / num_iters)
+        end = start + frame_size
 
-        # 🔹 DCT
-        X = dct(y, norm='ortho')
+        frame = observed_signal[start:end]
+        mask_frame = mask[start:end]
 
-        # 🔹 Sparse coding
-        X = soft_threshold(X, threshold)
+        # Process frame
+        rec_frame = process_frame(frame, mask_frame,
+                                  num_iters,
+                                  keep_ratio,
+                                  lambda_grad)
 
-        # 🔹 IDCT
-        x_new = idct(X, norm='ortho')
+        # Overlap-add
+        reconstructed[start:end] += rec_frame
+        weight[start:end] += 1
 
-        # 🔹 Gradient smoothing
-        x_new = gradient_smoothing(x_new, weight=lambda_grad)
+    # Avoid division by zero
+    weight[weight == 0] = 1
 
-        # 🔹 Enforce known samples
-        x_new = mask * (observed_signal / max_val) + (1 - mask) * x_new
+    reconstructed /= weight
 
-        # 🔹 FISTA momentum
-        t_new = (1 + np.sqrt(1 + 4 * t**2)) / 2
-        y = x_new + ((t - 1) / t_new) * (x_new - x)
-
-        x = x_new
-        t = t_new
-
-    # 🔹 Denormalize
-    return x * max_val
+    return reconstructed
