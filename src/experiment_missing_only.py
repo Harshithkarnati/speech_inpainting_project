@@ -13,7 +13,7 @@ def run_missing_only():
     signal, sr = librosa.load("data/input/speech1.wav", sr=16000)
 
     # 🔹 Missing percentages
-    missing_rates = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+    missing_rates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
 
     snr_values = []
 
