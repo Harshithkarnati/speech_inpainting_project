@@ -5,3 +5,4 @@ librosa
 soundfile
 tqdm
 scikit-learn
+pesq

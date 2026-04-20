@@ -5,7 +5,7 @@ from tqdm import tqdm
 from mask_generator import generate_mask, apply_mask
 from noise import add_awgn
 from hybrid_inpainting import inpaint_signal
-from metrics import compute_snr
+from metrics import compute_snr, compute_pesq
 import matplotlib.pyplot as plt
 import os
 
@@ -19,6 +19,7 @@ def run_missing_noise():
 
     # 🔹 Multiple noise levels
     snr_noise_levels = [30, 20, 10]
+    pesq_curves = {}
 
     print("Running Missing + Multiple Noise Experiment...")
 
@@ -27,6 +28,7 @@ def run_missing_noise():
     for noise_db in snr_noise_levels:
 
         snr_values = []
+        pesq_values = []
 
         print(f"\n--- Noise Level: {noise_db} dB ---")
 
@@ -46,9 +48,16 @@ def run_missing_noise():
 
             # Step 5: Compute SNR
             snr = compute_snr(signal, reconstructed)
+            pesq_score = compute_pesq(signal, reconstructed, sr)
             snr_values.append(snr)
+            pesq_values.append(pesq_score)
 
-            print(f"Missing: {rate}% | Noise: {noise_db} dB | SNR: {snr:.2f} dB")
+            print(
+                f"Missing: {rate}% | Noise: {noise_db} dB | "
+                f"SNR: {snr:.2f} dB | PESQ: {pesq_score:.3f}"
+            )
+
+        pesq_curves[noise_db] = pesq_values
 
         # 🔹 Plot this curve
         plt.plot(missing_rates, snr_values, marker='o', label=f"Noise {noise_db} dB")
@@ -63,6 +72,21 @@ def run_missing_noise():
     # 🔹 Save plot
     os.makedirs("results/plots", exist_ok=True)
     plt.savefig("results/plots/multiple_noise.png")
+
+    plt.show()
+
+    # 🔹 PESQ plot after SNR plot
+    plt.figure(figsize=(8, 5))
+
+    for noise_db in snr_noise_levels:
+        plt.plot(missing_rates, pesq_curves[noise_db], marker='o', label=f"Noise {noise_db} dB")
+
+    plt.title("Missing % vs PESQ (Multiple Noise Levels)")
+    plt.xlabel("Missing Percentage (%)")
+    plt.ylabel("PESQ")
+    plt.grid(True)
+    plt.legend()
+    plt.savefig("results/plots/multiple_noise_pesq.png")
 
     plt.show()
 
