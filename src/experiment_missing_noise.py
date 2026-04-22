@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 from mask_generator import generate_mask, apply_mask
 from noise import add_awgn
-from hybrid_inpainting import inpaint_signal
+from hybrid_inpainting_dct import inpaint_signal
 from metrics import compute_snr, compute_pesq
 import matplotlib.pyplot as plt
 import os
@@ -54,7 +54,8 @@ def run_missing_noise():
 
             print(
                 f"Missing: {rate}% | Noise: {noise_db} dB | "
-                f"SNR: {snr:.2f} dB | PESQ: {pesq_score:.3f}"
+                # f"SNR: {snr:.2f} dB | PESQ: {pesq_score :.3f}"
+                f"SNR: {snr:.2f} dB | PESQ: {pesq_score :.3f}"
             )
 
         pesq_curves[noise_db] = pesq_values

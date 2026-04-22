@@ -3,7 +3,7 @@ import librosa
 from tqdm import tqdm
 
 from mask_generator import generate_mask, apply_mask
-from hybrid_inpainting import inpaint_signal
+from hybrid_inpainting_dct import inpaint_signal
 from metrics import compute_snr, compute_pesq
 from plotting import plot_results
 
@@ -30,6 +30,7 @@ def run_missing_only():
 
         # Step 3: Reconstruct
         reconstructed = inpaint_signal(observed, mask)
+        # reconstructed =observed.copy()  # No inpainting, just for testing SNR with missing samples
 
         # Step 4: Compute SNR
         snr = compute_snr(signal, reconstructed)
